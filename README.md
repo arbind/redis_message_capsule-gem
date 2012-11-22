@@ -65,10 +65,10 @@ In ruby window 1 - emit dog messages:
     #
     # materialize a message capsule bound to a redis db
     redisURL = ENV["REDIS_URL"] || ENV["REDISTOGO_URL"] || "redis://127.0.0.1:6379/"
-    capsule = RedisMessageCapsule.materializeCapsule redisURL
+    capsule = RedisMessageCapsule.materialize_capsule redisURL
     #
     # create a dog channel to send messages on, and start barking
-    dog = capsule.materializeChannel 'dog'
+    dog = capsule.materialize_channel 'dog'
     dog.emit 'bark'
 
 In ruby window 2 -  listen for dog messages in ruby and emit cat messages:
