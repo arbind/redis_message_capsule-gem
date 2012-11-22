@@ -7,6 +7,9 @@ Send messages between node or rails apps asynchronously (via redis).
     $ npm install redis_message_capsule
     $ gem install redis_message_capsule
 
+* [report an issue with the ruby version] (https://github.com/arbind/redis_message_capsule/issues)
+* [report an issue with the node version] (https://github.com/arbind/redis_message_capsule-node/issues)
+
 ## Demonstration
 * Make sure redis is running
 * Data or object being sent will automatically be serialized to json (in order to teleport through redis)
