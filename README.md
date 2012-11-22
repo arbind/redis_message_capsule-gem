@@ -95,6 +95,48 @@ Back in ruby window 1 - send more dog messages:
     # => {"say"=>"grrrrrr", "time"=>"2012-11-21 08:08:08 -0800"} 
     # => purr
 
+## Environment
+In order for 2 apps to send messages to each other, they must select the same redis db number.
+
+By default, RedisMessageCapsule will: 
+* select 9 for test environment
+* select 8 for development environment
+* select 7 for production environment
+The selected db can also be overriden when materializing a capsule  (examples are below).
+
+If 2 apps are not sending messages to each other:
+* check that they are both in the same environment (test, development, production)
+* or be sure to use the same dbNumber when materializing a capsule.
+
+## Environment for node
+In node use one of the following to set your environment
+
+    process.env.NODE_ENV = 'test'          // redisDB.select 9
+    process.env.NODE_ENV = 'development'   // redisDB.select 8
+    process.env.NODE_ENV = 'production'    // redisDB.select 7
+
+Alternatively, you can override these defaults for the redis db when materializing a capsule:
+
+    RedisMessageCapsule = require('redis-message-capsule')
+    redisURL = process.env.REDIS_URL || process.env.REDISTOGO_URL || 'redis://127.0.0.1:6379/' 
+    dbNumber = 5
+    capsule = RedisMessageCapsule.materializeCapsule(redisURL, dbNumber)
+
+## Environment for ruby
+In ruby use one of the following to set your environment
+
+    ENV["RACK_ENV"] = 'test'          // redisDB.select 9
+    ENV["RACK_ENV"] = 'development'   // redisDB.select 8
+    ENV["RACK_ENV"] = 'production'    // redisDB.select 7
+
+Alternatively, you can override these defaults for the redis db when materializing a capsule:
+
+    require 'redis_message_capsule'
+    redisURL = ENV["REDIS_URL"] || ENV["REDISTOGO_URL"] || "redis://127.0.0.1:6379/"
+    dbNumber = 5
+    capsule = RedisMessageCapsule.materialize_capsule redisURL, dbNumber
+
+
 ## Contributing
 
 1. Fork it
