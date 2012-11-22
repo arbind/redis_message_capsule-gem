@@ -1,14 +1,13 @@
 # RedisMessageCapsule
 
 Send messages between node or rails apps asynchronously (via redis).
+* [report an issue with the ruby version] (https://github.com/arbind/redis_message_capsule/issues)
+* [report an issue with the node version] (https://github.com/arbind/redis_message_capsule-node/issues)
 
 ## Installation (with npm for node) (as a gem for ruby)
 
     $ npm install redis_message_capsule
     $ gem install redis_message_capsule
-
-* [report an issue with the ruby version] (https://github.com/arbind/redis_message_capsule/issues)
-* [report an issue with the node version] (https://github.com/arbind/redis_message_capsule-node/issues)
 
 ## Demonstration
 * Make sure redis is running
@@ -138,6 +137,16 @@ Alternatively, you can override these defaults for the redis db when materializi
     redisURL = ENV["REDIS_URL"] || ENV["REDISTOGO_URL"] || "redis://127.0.0.1:6379/"
     dbNumber = 5
     capsule = RedisMessageCapsule.materialize_capsule redisURL, dbNumber
+
+
+## Build the gem locally:
+    git clone git@github.com:arbind/redis_message_capsule-gem.git
+    cd redis_message_capsule-gem
+    bundle
+    
+    gem uninstall redis_message_capsule
+    gem build redis_message_capsule.gemspec
+    rake install
 
 
 ## Contributing
