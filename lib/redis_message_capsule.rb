@@ -111,6 +111,7 @@ class RedisMessageCapsule::Capsule::ChannelEmitter
     puts e.backtrace
   end
   alias_method :send, :emit
+  alias_method :message, :emit
 
 end
 
