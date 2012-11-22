@@ -35,13 +35,12 @@ In node window 1 - emit messages from cat:
 In node window 2 - listen for cat messages, emit messages from dog:
 
     $ node
-    require('redis-message-capsule')
-    redisURL = process.env.REDIS_URL || process.env.REDISTOGO_URL || 'redis://127.0.0.1:6379/' 
     RedisMessageCapsule = require('redis-message-capsule')
+    redisURL = process.env.REDIS_URL || process.env.REDISTOGO_URL || 'redis://127.0.0.1:6379/' 
     capsule = RedisMessageCapsule.materializeCapsule(redisURL)
     //
     // start listening for cat messages
-    capsule.listen_for('cat', function(err, message){ console.log(message) }  ) 
+    capsule.listenFor('cat', function(err, message){ console.log(message) }  ) 
     // => meow
     // => meow    
     // create a dog channel to send messages to ruby, and start barking
@@ -82,9 +81,9 @@ In ruby window 2 -  listen for dog messages in ruby and emit cat messages:
     end
     # => woof!woof!
     # => bark!bark!
-    // create a cat channel to send messages to node
+    # create a cat channel to send messages to node
     cat = capsule.materialize_channel 'cat'
-    cat.emit 'purrr' // will show up in node window 2 (listening to cat)
+    cat.emit 'purrr' # will show up in node window 2 (listening to cat)
 
 Back in ruby window 1 - send more dog messages:
 
