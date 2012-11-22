@@ -1,58 +1,100 @@
 # RedisMessageCapsule
 
-Send and receive real-time messages between applications (via redis).
+Send messages between node or rails apps asynchronously (via redis).
 
-## Installation
+## Installation (with npm for node) (as a gem for ruby)
 
-Add this line to your application's Gemfile:
-
-    gem 'redis_message_capsule'
-
-And then execute:
-
-    $ bundle
-
-Or install it yourself as:
-
+    $ npm install redis_message_capsule
     $ gem install redis_message_capsule
 
-## Usage
+## Demonstration
+* Make sure redis is running
+* Data or object being sent will automatically be serialized to json (in order to teleport through redis)
+  * in node: using obj.toJSON() or JSON.stringify(obj)
+  * in rails: using obj.to_json 
+* Demo for node <-> node: Open 2 terminal windows to send messages between 2 node apps  (outlined below)
+* Demo for ruby <-> ruby: Open 2 terminal windows to send messages between 2 ruby apps  (outlined below)
+* Demo for node <-> ruby: Open 4 terminal windows and do both of the demos above (which are outlined below)
+* Think of each window that you open as a stand-alone app
 
-Open terminal window one (to send messages):
+### Demo for node <-> node
+In node window 1 - emit messages from cat:
+
+    $ node
+    RedisMessageCapsule = require('redis-message-capsule')
+    //
+    // materialize a message capsule bound to a redis db
+    redisURL = process.env.REDIS_URL || process.env.REDISTOGO_URL || 'redis://127.0.0.1:6379/' 
+    capsule = RedisMessageCapsule.materializeCapsule(redisURL)
+    //
+    // create a cat channel to send messages on, and start meowing
+    cat = capsule.materializeChannel('cat')
+    cat.emit('meow')    // will show up in node window 2 (listening to cat)
+    cat.emit('meow')    // will show up in node window 2 (listening to cat)
+ 
+In node window 2 - listen for cat messages, emit messages from dog:
+
+    $ node
+    require('redis-message-capsule')
+    redisURL = process.env.REDIS_URL || process.env.REDISTOGO_URL || 'redis://127.0.0.1:6379/' 
+    RedisMessageCapsule = require('redis-message-capsule')
+    capsule = RedisMessageCapsule.materializeCapsule(redisURL)
+    //
+    // start listening for cat messages
+    capsule.listen_for('cat', function(err, message){ console.log(message) }  ) 
+    // => meow
+    // => meow    
+    // create a dog channel to send messages to ruby, and start barking
+    dog = capsule.materializeChannel('dog')
+    dog.emit('woof')  // will show up in ruby window 2 (listening to dog)
+
+In node window 1 - send more cat messages:
+
+    talk = { say: 'roar', time: new Date() }
+    cat.emit(9)
+    cat.emit( talk )
+    // Watch for real-time messages show up in node window 2:
+    // => 9 
+    // => {"say"=>"roar", "time"=>"2012-11-21 08:08:08 -0800"} 
+
+###  Demo for ruby <-> ruby
+In ruby window 1 - emit dog messages:
 
     $ irb
     require 'redis_message_capsule'
-    channel_cat = RedisMessageCapsule.channel('cat')
-    channel_cat.send('meow')
-    channel_cat.send('meow')
+    #
+    # materialize a message capsule bound to a redis db
+    redisURL = ENV["REDIS_URL"] || ENV["REDISTOGO_URL"] || "redis://127.0.0.1:6379/"
+    capsule = RedisMessageCapsule.materializeCapsule redisURL
+    #
+    # create a dog channel to send messages on, and start barking
+    dog = capsule.materializeChannel 'dog'
+    dog.emit 'bark'
 
-Open terminal window two (to listen for messages):
+In ruby window 2 -  listen for dog messages in ruby and emit cat messages:
 
     $ irb
     require 'redis_message_capsule'
-    RedisMessageCapsule.listen('cat') do |msg| 
-        puts msg
+    redisURL = ENV["REDIS_URL"] || ENV["REDISTOGO_URL"] || "redis://127.0.0.1:6379/"
+    capsule = RedisMessageCapsule.materialize_capsule redisURL
+    capsule.listen_for('dog') do |msg| 
+        puts "#{msg}!" * 2
     end
-    # => meow
+    # => woof!woof!
+    # => bark!bark!
+    // create a cat channel to send messages to node
+    cat = capsule.materialize_channel 'cat'
+    cat.emit 'purrr' // will show up in node window 2 (listening to cat)
 
-Go back to terminal window one:
+Back in ruby window 1 - send more dog messages:
 
-    channel_cat.send 9
-    channel_cat.send say: 'roar', time: Time.now
-    channel_cat.send :purr
-
-Watch for messages in terminal window two:
-
-    # => 9 
-    # => {"say"=>"roar", "time"=>"2012-11-19 23:16:08 -0800"} 
+    talk = { say: 'grrrrrr', time: new Date() }
+    dog.emit 2      # will show up in window 4 (listening to dog)
+    dog.emit talk   # will show up in window 4 (listening to dog)
+    # Watch for real-time messages to show up in ruby window 2:
+    # => 2 
+    # => {"say"=>"grrrrrr", "time"=>"2012-11-21 08:08:08 -0800"} 
     # => purr
-
-(Make sure you have redis running)
-
-## Comming Soon
-
-A node.js version you can use to send messages back and forth between node and rails apps.
-
 
 ## Contributing
 

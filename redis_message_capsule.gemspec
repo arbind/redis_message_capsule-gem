@@ -8,7 +8,7 @@ Gem::Specification.new do |gem|
   gem.version       = RedisMessageCapsule::VERSION
   gem.authors       = ["Arbind"]
   gem.email         = ["arbind@carbonfive.com"]
-  gem.description   = "Send and receive real-time messages between applications (via redis)."
+  gem.description   = "Send messages between node or rails apps asynchronously (via redis)."
   gem.summary       = ""
   gem.homepage      = ""
 
