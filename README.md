@@ -10,41 +10,46 @@ Send messages between node or rails apps asynchronously (via redis).
     $ gem install redis_message_capsule
 
 ## Usage
-RedisMessageCapsule is used in the same way for both node and ruby (the syntax is different, naturally).
+RedisMessageCapsule is used in the same way for both node and ruby (just the syntax is different, naturally).
 
 The pseudo code goes something like this:
 
     # 1. Create a capsule that is bound to the redis DB:
-    load RedisMessageCapsule
-    capsule = materializeCapsule(redisURL)
+    > load RedisMessageCapsule
+    > capsule = materializeCapsule(redisURL, dbNumber)
 
-    # 2. Create a named channel that you want send or receive messages on
-    cat = capsule.materializeChannel('cat')
+    # 2. Create a named channel that you want to send or receive messages on
+    > catChannel = capsule.materializeChannel('cat')
 
     # 3.a Either: Send messages on the channel:
-    cat.send('meeeooow')
-    cat.send('roooaaar')
+    > catChannel.send('meeeooow')
+    > catChannel.send('roooaaar')
 
     # 3.b Or: Handle the messages that are recieved on the channel:
-    messageHandler = { |message| doSomethingWith(message) }
-    cat.register(messageHandler) 
-Create as many channels and listeners as you want.
+    > messageHandler = { |message| doSomethingWith(message) }
+    > catChannel.register(messageHandler) 
+
+    # 4. Create as many channels and listeners as you want, using the capsule.
+
+    # 5. Create as many capsules as you want (only need one capsule for each redisURL:dbNumber )
 
 The purpose of RedisMessageCapsule is to enable separate apps to communicate with each other asynchronously.
 
-So, normally, one app would do the sending and another would listen for the message. However, nothing restricts the same app from doing the sending as well as the receiving.
+So, normally, one app would do the sending and another would listen for the message.
+However, nothing restricts the same app from doing the sending as well as receiving its own message.
 
-This is not your typical pub/sub model as messages are not broadcast to all listeners.
+This is not your typical pub/sub model as messages are not broadcast to all apps that are listening on a channel.
 
-If there are multiple listeners on a channel, only once will actually receive the message for processing.
+## Advanced Usage
+If multiple apps are listening on a channel, only one will actually receive the message.
+Each app can register multiple handlers for a channel, but only one app will actually get the message for processing.
 
-In ruby, the listeners will block waiting for a message, so the listener that is waiting the longest would get the message.
+In ruby, the listeners will block waiting for a message, so the app that is waiting the longest would get the message.
 
 With node, however, there is no guarentee of order, since the listeners are not blocking the event loop.
 
-
 ## Demonstration
-Below are demonstrations for sending messages between 2 apps (node apps, ruby apps and a combination of both).
+Below are code demonstrations for sending messages between 2 apps (node apps, ruby apps and a combination of both).
 
 * Make sure redis is running
 * Data or object being sent will automatically be serialized to json (in order to teleport through redis)

@@ -9,8 +9,8 @@ Gem::Specification.new do |gem|
   gem.authors       = ["Arbind"]
   gem.email         = ["arbind@carbonfive.com"]
   gem.description   = "Send messages between node or rails apps asynchronously (via redis)."
-  gem.summary       = ""
-  gem.homepage      = ""
+  gem.summary       = "See the README file for code demonstrations"
+  gem.homepage      = "https://github.com/arbind/redis_message_capsule-gem"
 
   gem.files         = `git ls-files`.split($/)
   gem.executables   = gem.files.grep(%r{^bin/}).map{ |f| File.basename(f) }
