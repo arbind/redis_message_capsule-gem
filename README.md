@@ -38,9 +38,9 @@ The purpose of RedisMessageCapsule is to enable separate apps to communicate wit
 So, normally, one app would do the sending and another would listen for the message.
 However, nothing restricts the same app from doing the sending as well as receiving its own message.
 
+## Advanced Usage
 This is not your typical pub/sub model as messages are not broadcast to all apps that are listening on a channel.
 
-## Advanced Usage
 If multiple apps are listening on a channel, only one will actually receive the message.
 Each app can register multiple handlers for a channel, but only one app will actually get the message for processing.
 
@@ -145,10 +145,10 @@ If 2 apps are not sending messages to each other:
 In node use one of the following to set your environment
 
     process.env.NODE_ENV = 'test'          // redisDB.select 9
-    process.env.NODE_ENV = 'development'   // redisDB.select 8
+    process.env.NODE_ENV = 'development'   // redisDB.select 8 * Default
     process.env.NODE_ENV = 'production'    // redisDB.select 7
 
-Alternatively, you can override these defaults for the redis db when materializing a capsule:
+Alternatively, you can specify exactly what you want when materializing a capsule:
 
     RedisMessageCapsule = require('redis-message-capsule')
     redisURL = process.env.REDIS_URL || process.env.REDISTOGO_URL || 'redis://127.0.0.1:6379/' 
@@ -159,10 +159,10 @@ Alternatively, you can override these defaults for the redis db when materializi
 In ruby use one of the following to set your environment
 
     ENV["RACK_ENV"] = 'test'          // redisDB.select 9
-    ENV["RACK_ENV"] = 'development'   // redisDB.select 8
+    ENV["RACK_ENV"] = 'development'   // redisDB.select 8  * Default
     ENV["RACK_ENV"] = 'production'    // redisDB.select 7
 
-Alternatively, you can override these defaults for the redis db when materializing a capsule:
+Alternatively, you can specify exactly what you want when materializing a capsule:
 
     require 'redis_message_capsule'
     redisURL = ENV["REDIS_URL"] || ENV["REDISTOGO_URL"] || "redis://127.0.0.1:6379/"
