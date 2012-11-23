@@ -9,9 +9,9 @@ module RedisMessageCapsule
   class Configuration
   end
   class Capsule
-    class ChannelEmitter
-    end
-    class ChannelListener
+    class Channel
+      class Listener
+      end
     end
   end
 end
@@ -58,7 +58,7 @@ module RedisMessageCapsule
 end
 
 class RedisMessageCapsule::Configuration
-  attr_accessor :environment, :db_number, :redis_url
+  attr_accessor :environment, :redis_url, :db_number
   def initialize
     self.environment = ENV["RACK_ENV"] || "development"
     self.db_number = 7 if self.environment.eql? 'production'
@@ -69,89 +69,113 @@ class RedisMessageCapsule::Configuration
   end
 end
 
-
 class RedisMessageCapsule::Capsule
-  attr_accessor :redis_client, :redis_uri, :db_number, :channel_emitters, :channel_listeners
+  attr_accessor :redis_client, :redis_uri, :db_number, :channels
 
   def initialize(redis_uri, db_number)
     @redis_uri = redis_uri
     @db_number = db_number
-    @channel_emitters = {}
-    @channel_listeners = {}
+    @channels = {}
     @redis_client = RedisMessageCapsule.materialize_redis_client @redis_uri, @db_number
   end
 
-  def materialize_channel(channel_name) channel_emitters[channel_name] ||= (ChannelEmitter.new channel_name, redis_client) end
-
-  def listen_for(channel_name, &block)
-    raise "listen_for(#{channel_name}): No callback was specified!" unless block_given?
-    @channel_listeners[channel_name] ||= (ChannelListener.new channel_name, @redis_uri, @db_number)
-    @channel_listeners[channel_name].startListening(&block)
+  def materialize_channel(channel_name)
+    channels[channel_name] ||= (Channel.new channel_name, redis_client, redis_uri, db_number)
   end
-  alias_method :on, :listen_for
-
-  # +++ TODO alias_method :off, :stop_listening
 
 end
 
+class RedisMessageCapsule::Capsule::Channel
+  attr_accessor :channel_name, :listener, :redis_client, :redis_uri, :db_number
 
-class RedisMessageCapsule::Capsule::ChannelEmitter
-  attr_accessor :channel_name, :redis_client
-
-  def initialize(channel_name, redis_client)
+  def initialize(channel_name, redis_client, redis_uri, db_number )
     self.channel_name = channel_name
     self.redis_client = redis_client
+    self.redis_uri = redis_uri
+    self.db_number = db_number
+    @listener = nil
   end
 
-  def emit (message)
+  def send (message)
     payload = { 'data' => message }
     redis_client.rpush channel_name, payload.to_json
   rescue Exception => e
     puts e.message
     puts e.backtrace
+  ensure
+    self # chainability
   end
-  alias_method :send, :emit
-  alias_method :message, :emit
+  alias_method :emit, :send
+  alias_method :message, :send
+
+  def register(&block)
+    raise "listen_for(#{channel_name}): No callback was specified!" unless block_given?
+    @listener ||= (Listener.new channel_name, redis_uri, db_number) # listener needs its own connection since it blocks
+    @listener.register(&block)
+    self # chainability
+  end
+  alias_method :on, :register
+  alias_method :listen, :register
+
+  def unregister(&block)
+    # +++
+  end
+
+  def stop_listening
+    # +++
+  end
 
 end
 
-class RedisMessageCapsule::Capsule::ChannelListener
+class RedisMessageCapsule::Capsule::Channel::Listener
   def initialize(channel_name, redis_uri, db_number)
     @channel_name = channel_name
     @redis_uri = redis_uri
     @db_number = db_number
-    @redis_client = RedisMessageCapsule.materialize_redis_client @redis_uri, @db_number
-
     @handlers = []
     @listener_thread = nil
   end
 
-  def register(&handler) @handlers << handler end
-  def unregister(&handler) @handlers.delete handler end
-
-  def startListening (&handler)
-    register(&handler)
-    @listener_thread ||= launch_listener
+  def register(&handler)
+    @handlers << handler
+    launch_listener if @listener_thread.nil?
+    handler
   end
 
+  def stop_listening
+    @listener_thread[:listening] = false unless @@listener_thread.nil?
+  end
+
+  def unregister(&handler) @handlers.delete handler end
+
   def launch_listener
-    ch_name = @channel_name
-    db = @redis_client
+    @listener_thread ||= Thread.new do
 
-    Thread.new do
+      blocking_redis_client = RedisMessageCapsule.materialize_redis_client @redis_uri, @db_number
+      # This redis connection will block when popping, so it is created inside of its own thread 
+
       Thread.current[:name] = :RedisMessageCapsule
-      Thread.current[:chanel] = ch_name
-      Thread.current[:description] = "Listening for '#{ch_name}' messages from #{@redis_uri} "
-      Thread.current[:redis_client] = db
+      Thread.current[:chanel] = @channel_name
+      Thread.current[:description] = "Listening for '#{@channel_name}' messages from #{@redis_uri}"
+      Thread.current[:redis_client] = blocking_redis_client
+      Thread.current[:listening] = true
 
-      loop do # listen forever
-        channel_element = db.blpop ch_name, 0 # pop a message, or block the thread and wait till the next one
-        ch = channel_element.first
-        element = channel_element.last
-        payload = ( JSON.parse(element) rescue {'data' => 'error parsing json!'} )
-        message = payload['data']
-        @handlers.each { |handler| handler.call(message) }
-      end #loop
+      while Thread.current[:listening] do # listen forever
+        begin
+          channel_element = blocking_redis_client.blpop @channel_name, 0 # pop a message, or block the thread and wait till the next one
+          unless channel_element.nil?
+            ch = channel_element.first
+            element = channel_element.last
+            payload = ( JSON.parse(element) rescue {'data' => 'error parsing json!'} )
+            message = payload['data']
+            puts @handlers.count
+            @handlers.each { |handler| handler.call(message) }
+          end
+        rescue Exception => e
+          Thread.current[:listening] = false # stop listening
+        end
+      end # while
     end # Thread.new
-  end # launce_listener
+  end # launch_listener
+
 end # class
