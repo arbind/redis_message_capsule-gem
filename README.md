@@ -6,8 +6,9 @@ Send messages between node or rails apps asynchronously (via redis).
 
 ## Installation (with npm for node) (as a gem for ruby)
 
-    $ npm install redis_message_capsule
+    $ npm install redis-message-capsule
     $ gem install redis_message_capsule
+Note that the javascript version is named with dashes, ruby with underscore
 
 ## Usage
 RedisMessageCapsule is used in the same way for both node and ruby (just the syntax is different, naturally).
