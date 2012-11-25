@@ -1,133 +1,97 @@
 # RedisMessageCapsule
 
 Send messages between node or rails apps asynchronously (via redis).
+
 * [report an issue with the ruby version] (https://github.com/arbind/redis_message_capsule/issues)
 * [report an issue with the node version] (https://github.com/arbind/redis_message_capsule-node/issues)
 
-## Installation (with npm for node) (as a gem for ruby)
+## Installation
 
-    $ npm install redis-message-capsule
+**in node**:
+
+    $ npm install redis_message_capsule
+
+**in ruby**:
+
     $ gem install redis_message_capsule
-Note that the javascript version is named with dashes, ruby with underscore
 
 ## Usage
-RedisMessageCapsule is used in the same way for both node and ruby (just the syntax is different, naturally).
-
-The pseudo code goes something like this:
-
-    # 1. Create a capsule that is bound to the redis DB:
-    > load RedisMessageCapsule
-    > capsule = materializeCapsule(redisURL, dbNumber)
-
-    # 2. Create a named channel that you want to send or receive messages on
-    > catChannel = capsule.materializeChannel('cat')
-
-    # 3.a Either: Send messages on the channel:
-    > catChannel.send('meeeooow')
-    > catChannel.send('roooaaar')
-
-    # 3.b Or: Handle the messages that are recieved on the channel:
-    > messageHandler = { |message| doSomethingWith(message) }
-    > catChannel.register(messageHandler) 
-
-    # 4. Create as many channels and listeners as you want, using the capsule.
-
-    # 5. Create as many capsules as you want (only need one capsule for each redisURL:dbNumber )
-
 The purpose of RedisMessageCapsule is to enable separate apps to communicate with each other asynchronously.
 
-So, normally, one app would do the sending and another would listen for the message.
-However, nothing restricts the same app from doing the sending as well as receiving its own message.
+The ruby implementation listens for messages in a separate thread, and node listens in a separate Fiber.
+
+### Make sure redis is running:
+The code below defaults to using redis running on localhost
+
+### Open 2 terminal windows to simulate any mixture of ruby or node apps:
+Both windows can be ruby, can be node, or one can be ruby and one can be node.
+
+### To Send Messages From Window 1
+**in node**:
+
+    $ node
+    require('redis_message_capsule')
+    redisurl = 'redis://127.0.0.1:6379/' 
+    capsule = RedisMessageCapsule.capsule(redisurl)
+    cat = capsule.channel('cat')
+    cat.send('meow')
+    cat.send('meow')
+
+**in ruby**:
+
+    $ irb
+    require('redis_message_capsule')
+    redisurl = 'redis://127.0.0.1:6379/' 
+    capsule = RedisMessageCapsule.capsule(redisurl)
+    cat = capsule.channel('cat')
+    cat.send('meow')
+    cat.send('meow')
+
+### To Receive messages In Window 2
+**in node**:
+
+    $ node
+    require('redis_message_capsule')
+    redisurl = 'redis://127.0.0.1:6379/' 
+    capsule = RedisMessageCapsule.capsule(redisurl)
+    cat = capsule.channel('cat')
+    cat.register(function(err, message){ console.log(message) })
+
+**in ruby**:
+
+    $ irb
+    require('redis_message_capsule')
+    redisurl = 'redis://127.0.0.1:6379/' 
+    capsule = RedisMessageCapsule.capsule(redisurl)
+    cat = capsule.channel('cat')
+    cat.register { |msg|  puts msg }
+
+### To Send More Messages From Window 1
+**in node**:
+
+    cat.send(9)
+    talk = { say: 'roar', time: new Date() }        // <- to create a hash in node
+    cat.send( talk )
+
+**in ruby**:
+
+    cat.send(9)
+    talk = { say: 'grrrrrr', time: Time.now }       #  <- to create a hash in ruby
+    cat.send( talk )
+
+* Use the module to create as many capsules as you want  (only need one capsule for each redisurl:redisdbnum)
+* Use a capsule to create as many channels as you want   (use 'ns:channelname' to add a namespace to your channel)
+* Use a channel to send as many messages as you want     (be sure the data you send can be serialized to json )
+* Use a channel to register as many handlers as you want (all registered handlers on a channel will get messages)
+* Send messages between any mixture of apps: [ node <-> node ] or [ ruby <-> ruby ] or [ node <-> ruby ]
 
 ## Advanced Usage
-This is not your typical pub/sub model as messages are not broadcast to all apps that are listening on a channel.
+This module sends messages in a queue rather than a typical pub/sub model: messages are not broadcast to all apps.
 
-If multiple apps are listening on a channel, only one will actually receive the message.
-Each app can register multiple handlers for a channel, but only one app will actually get the message for processing.
-
-In ruby, the listeners will block waiting for a message, so the app that is waiting the longest would get the message.
-
-With node, however, there is no guarentee of order, since the listeners are not blocking the event loop.
-
-## Demonstration
-Below are code demonstrations for sending messages between 2 apps (node apps, ruby apps and a combination of both).
-
-* Make sure redis is running
-* Data or object being sent will automatically be serialized to json (in order to teleport through redis)
-  * in node: using obj.toJSON() or JSON.stringify(obj)
-  * in rails: using obj.to_json 
-* Demo for node <-> node: Open 2 terminal windows to send messages between 2 node apps  (outlined below)
-* Demo for ruby <-> ruby: Open 2 terminal windows to send messages between 2 ruby apps  (outlined below)
-* Demo for node <-> ruby: Open 4 terminal windows and do both of the demos above (which are outlined below)
-* Think of each window that you open as a stand-alone app
-
-### Demo for node <-> node
-In node window 1 - send cat messages:
-
-    $ node
-    RedisMessageCapsule = require('redis-message-capsule')
-    redisURL = process.env.REDIS_URL || process.env.REDISTOGO_URL || 'redis://127.0.0.1:6379/' 
-    capsule = RedisMessageCapsule.materializeCapsule(redisURL)
-    cat = capsule.materializeChannel('cat')
-    cat.send('meow')    // will show up in node window 2 (listening to cat)
-    cat.send('meow')    // will show up in node window 2 (listening to cat)
- 
-In node window 2 - listen for cat messages, send messages from dog:
-
-    $ node
-    RedisMessageCapsule = require('redis-message-capsule')
-    redisURL = process.env.REDIS_URL || process.env.REDISTOGO_URL || 'redis://127.0.0.1:6379/' 
-    capsule = RedisMessageCapsule.materializeCapsule(redisURL)
-    cat = capsule.materializeChannel('cat')
-    cat.register( function(err, message){ console.log(message) }  ) 
-    // => meow
-    // => meow    
-    // create a dog channel to send messages to ruby, and start barking
-    dog = capsule.materializeChannel('dog')
-    dog.send('woof')  // will show up in ruby window 2 (listening to dog)
-
-In node window 1 - send more cat messages:
-
-    talk = { say: 'roar', time: new Date() }
-    cat.send(9)
-    cat.send( talk )
-    // Watch for real-time messages show up in node window 2:
-    // => 9 
-    // => {"say"=>"roar", "time"=>"2012-11-21T208:08:08.808Z"} 
-
-###  Demo for ruby <-> ruby
-In ruby window 1 - send dog messages:
-
-    $ irb
-    require 'redis_message_capsule'
-    redisURL = ENV["REDIS_URL"] || ENV["REDISTOGO_URL"] || "redis://127.0.0.1:6379/"
-    capsule = RedisMessageCapsule.materialize_capsule redisURL
-    dog = capsule.materialize_channel 'dog'
-    dog.send 'bark'
-
-In ruby window 2 -  listen for dog messages in ruby and send cat messages:
-
-    $ irb
-    require 'redis_message_capsule'
-    redisURL = ENV["REDIS_URL"] || ENV["REDISTOGO_URL"] || "redis://127.0.0.1:6379/"
-    capsule = RedisMessageCapsule.materialize_capsule redisURL
-    dog = capsule.materialize_channel 'dog'
-    dog.register { |msg|  puts "#{msg}!" * 2 }
-    # => woof!woof!
-    # => bark!bark!
-    # create a cat channel to send messages to node
-    cat = capsule.materialize_channel 'cat'
-    cat.send 'purrr' # will show up in node window 2 (listening to cat)
-
-Back in ruby window 1 - send more dog messages:
-
-    talk = { say: 'grrrrrr', time: Time.now }
-    dog.send 2      # will show up in window 4 (listening to dog)
-    dog.send talk   # will show up in window 4 (listening to dog)
-    # Watch for real-time messages to show up in ruby window 2:
-    # => 2 
-    # => {"say"=>"grrrrrr", "time"=>"2012-11-21 08:08:08 -0800"} 
-    # => purr
+### Multiple Listeners on a Channel Will Round Robin
+* If multiple apps are listening on the same channel, only one will actually receive the message and pass it on to its registered handlers for processing.
+* Listeners run in their own thread (in ruby) or fiber (in node) and may block waiting for a message.
+* When a message comes in, only the app that was waiting the longest will receive it.
 
 ## Environment
 In order for 2 apps to send messages to each other, they must bind a capsule to the same redis DB and select the same db number.
@@ -140,7 +104,7 @@ The selected db can also be overriden when materializing a capsule  (examples ar
 
 If 2 apps are not sending messages to each other:
 * check that they are both in the same environment (test, development, production)
-* or be sure to override using same dbNumber when materializing a capsule.
+* or be sure to override using same redisdb when materializing a capsule.
 
 ## Environment for node
 In node use one of the following to set your environment
@@ -151,10 +115,10 @@ In node use one of the following to set your environment
 
 Alternatively, you can specify exactly what you want when materializing a capsule:
 
-    RedisMessageCapsule = require('redis-message-capsule')
-    redisURL = process.env.REDIS_URL || process.env.REDISTOGO_URL || 'redis://127.0.0.1:6379/' 
-    dbNumber = 5
-    capsule = RedisMessageCapsule.materializeCapsule(redisURL, dbNumber)
+    RedisMessageCapsule = require('redis_message_capsule')
+    redisurl = process.env.REDIS_URL || process.env.REDISTOGO_URL || 'redis://127.0.0.1:6379/' 
+    redisdb = 5
+    capsule = RedisMessageCapsule.capsule(redisurl, redisdb)
 
 ## Environment for ruby
 In ruby use one of the following to set your environment
@@ -166,15 +130,15 @@ In ruby use one of the following to set your environment
 Alternatively, you can specify exactly what you want when materializing a capsule:
 
     require 'redis_message_capsule'
-    redisURL = ENV["REDIS_URL"] || ENV["REDISTOGO_URL"] || "redis://127.0.0.1:6379/"
-    dbNumber = 5
-    capsule = RedisMessageCapsule.materialize_capsule redisURL, dbNumber
+    redisurl = ENV["REDIS_URL"] || ENV["REDISTOGO_URL"] || "redis://127.0.0.1:6379/"
+    redisdb = 5
+    capsule = RedisMessageCapsule.capsule redisurl, redisdb
 
 ## To build the gem locally:
     git clone git@github.com:arbind/redis_message_capsule-gem.git
     cd redis_message_capsule-gem
     bundle
-    
+
     gem uninstall redis_message_capsule
     gem build redis_message_capsule.gemspec
     rake install
