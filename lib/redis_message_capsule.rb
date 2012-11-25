@@ -82,6 +82,9 @@ class RedisMessageCapsule::Capsule
   def materialize_channel(channel_name)
     channels[channel_name] ||= (Channel.new channel_name, redis_client, redis_uri, db_number)
   end
+  alias_method :channel, :materialize_channel
+  alias_method :make_channel, :materialize_channel
+  alias_method :create_channel, :materialize_channel
 
 end
 
@@ -168,7 +171,6 @@ class RedisMessageCapsule::Capsule::Channel::Listener
             element = channel_element.last
             payload = ( JSON.parse(element) rescue {'data' => 'error parsing json!'} )
             message = payload['data']
-            puts @handlers.count
             @handlers.each { |handler| handler.call(message) }
           end
         rescue Exception => e
