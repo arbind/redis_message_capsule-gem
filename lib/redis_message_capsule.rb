@@ -102,9 +102,6 @@ class RedisMessageCapsule::Capsule::Channel
   def send (message)
     payload = { 'data' => message }
     redis_client.rpush channel_name, payload.to_json
-  rescue Exception => e
-    puts e.message
-    puts e.backtrace
   ensure
     self # chainability
   end
@@ -175,6 +172,7 @@ class RedisMessageCapsule::Capsule::Channel::Listener
           end
         rescue Exception => e
           Thread.current[:listening] = false # stop listening
+          raise e
         end
       end # while
     end # Thread.new
