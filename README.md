@@ -31,7 +31,7 @@ Both windows can be ruby, can be node, or one can be ruby and one can be node.
 
     $ node
     require('redis_message_capsule')
-    redisurl = 'redis://127.0.0.1:6379/' 
+    redisurl = 'redis://127.0.0.1:6379/'
     capsule = RedisMessageCapsule.capsule(redisurl)
     cat = capsule.channel('cat')
     cat.send('meow')
@@ -41,9 +41,10 @@ Both windows can be ruby, can be node, or one can be ruby and one can be node.
 
     $ irb
     require('redis_message_capsule')
-    redisurl = 'redis://127.0.0.1:6379/' 
+    redisurl = 'redis://127.0.0.1:6379/'
     capsule = RedisMessageCapsule.capsule(redisurl)
     cat = capsule.channel('cat')
+    cat.clear        # delete any messages in the channel
     cat.send('meow')
     cat.send('meow')
 
@@ -52,7 +53,7 @@ Both windows can be ruby, can be node, or one can be ruby and one can be node.
 
     $ node
     require('redis_message_capsule')
-    redisurl = 'redis://127.0.0.1:6379/' 
+    redisurl = 'redis://127.0.0.1:6379/'
     capsule = RedisMessageCapsule.capsule(redisurl)
     cat = capsule.channel('cat')
     cat.register(function(err, message){ console.log(message) })
@@ -61,10 +62,11 @@ Both windows can be ruby, can be node, or one can be ruby and one can be node.
 
     $ irb
     require('redis_message_capsule')
-    redisurl = 'redis://127.0.0.1:6379/' 
+    redisurl = 'redis://127.0.0.1:6379/'
     capsule = RedisMessageCapsule.capsule(redisurl)
     cat = capsule.channel('cat')
     cat.register { |msg|  puts msg }
+For Rails apps, listeners can be registered in an initializer.
 
 ### To Send More Messages From Window 1
 **in node**:
@@ -90,8 +92,8 @@ This module sends messages in a queue rather than a typical pub/sub model: messa
 
 ### Multiple Listeners on a Channel Will Round Robin
 * If multiple apps are listening on the same channel, only one will actually receive the message and pass it on to its registered handlers for processing.
-* Listeners run in their own thread (in ruby) or fiber (in node) and may block waiting for a message.
-* When a message comes in, only the app that was waiting the longest will receive it.
+* Listeners run in their own thread (in ruby) or fiber (in node). They will block themselves when waiting for a message, so the main event loop can continue.
+* When a message comes in, only the app that was waiting the longest will receive it (the message will be forwarded to all handlers registered in that app).
 
 ## Environment
 In order for 2 apps to send messages to each other, they must bind a capsule to the same redis DB and select the same db number.
@@ -116,7 +118,7 @@ In node use one of the following to set your environment
 Alternatively, you can specify exactly what you want when materializing a capsule:
 
     RedisMessageCapsule = require('redis_message_capsule')
-    redisurl = process.env.REDIS_URL || process.env.REDISTOGO_URL || 'redis://127.0.0.1:6379/' 
+    redisurl = process.env.REDIS_URL || process.env.REDISTOGO_URL || 'redis://127.0.0.1:6379/'
     redisdb = 5
     capsule = RedisMessageCapsule.capsule(redisurl, redisdb)
 

@@ -32,7 +32,7 @@ module RedisMessageCapsule
   def self.capsules() @capsules ||=  {} end
   def self.make_capsule_key(url, db_num) "#{url}.#{db_num}" end
   def self.materialize_capsule(redis_url=nil, db_number=-1)
-    url = redis_url || config.redis_url    
+    url = redis_url || config.redis_url
     redis_uri = URI.parse(url) rescue nil
     return nil if redis_uri.nil?
 
@@ -99,6 +99,10 @@ class RedisMessageCapsule::Capsule::Channel
     @listener = nil
   end
 
+  def clear
+    redis_client.del channel_name
+  end
+
   def send (message)
     payload = { 'data' => message }
     redis_client.rpush channel_name, payload.to_json
@@ -152,7 +156,7 @@ class RedisMessageCapsule::Capsule::Channel::Listener
     @listener_thread ||= Thread.new do
 
       blocking_redis_client = RedisMessageCapsule.materialize_redis_client @redis_uri, @db_number
-      # This redis connection will block when popping, so it is created inside of its own thread 
+      # This redis connection will block when popping, so it is created inside of its own thread
 
       Thread.current[:name] = :RedisMessageCapsule
       Thread.current[:chanel] = @channel_name
