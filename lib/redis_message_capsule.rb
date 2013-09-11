@@ -104,8 +104,8 @@ class RedisMessageCapsule::Capsule::Channel
   end
 
   def send (message)
-    payload = { 'data' => message }
-    redis_client.rpush channel_name, payload.to_json
+    payload = "{\"data\":#{message.to_json}}"
+    redis_client.rpush channel_name, payload
   ensure
     self # chainability
   end
