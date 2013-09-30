@@ -122,7 +122,7 @@ class RedisMessageCapsule::Capsule::Channel
   alias_method :listen, :register
 
   def unregister(&block)
-    # +++
+    @listener.unregister(&block)
   end
 
   def stop_listening
